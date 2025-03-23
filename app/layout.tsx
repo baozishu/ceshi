@@ -1,35 +1,34 @@
 import type React from "react"
-import "@/app/globals.css"
-
+import type { Metadata } from "next"
 import { Inter } from "next/font/google"
-
-import { AuthProvider } from "@/lib/auth-context"
-import { ThemeProvider } from "@/components/theme-provider"
-import { Toaster } from "@/components/ui/toaster"
+import "./globals.css"
 
 const inter = Inter({ subsets: ["latin"] })
 
-export const metadata = {
-  title: "导航站 - 自定义分类",
-  description: "一个可自定义分类的导航网站",
+export const metadata: Metadata = {
+  title: "域名展示",
+  description: "展示和管理您的域名集合",
+  icons: {
+    icon: [
+      // 使用外部图片链接作为favicon
+      { url: "https://xn--1xa.team/img/favicon.ico", type: "image/png" },
+    ],
+    apple: [
+      // 同样使用外部图片链接作为apple图标
+      { url: "https://xn--1xa.team/img/favicon.ico", type: "image/png" },
+    ],
+  },
     generator: 'v0.dev'
 }
 
 export default function RootLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode
-}>) {
+}) {
   return (
-    <html lang="zh-CN" suppressHydrationWarning>
-      <body className={inter.className}>
-        <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
-          <AuthProvider>
-            {children}
-            <Toaster />
-          </AuthProvider>
-        </ThemeProvider>
-      </body>
+    <html lang="zh">
+      <body className={inter.className}>{children}</body>
     </html>
   )
 }
