@@ -13,7 +13,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { LogOut, Settings, User } from "lucide-react"
+import { LogOut, Settings, User, Database } from "lucide-react"
 
 export function UserMenu() {
   const { user, logout } = useAuth()
@@ -52,6 +52,12 @@ export function UserMenu() {
           <Link href="/dashboard?tab=profile" className="flex items-center cursor-pointer">
             <User className="mr-2 h-4 w-4" />
             <span>个人资料</span>
+          </Link>
+        </DropdownMenuItem>
+        <DropdownMenuItem asChild>
+          <Link href="/dashboard?tab=backup" className="flex items-center cursor-pointer">
+            <Database className="mr-2 h-4 w-4" />
+            <span>备份管理</span>
           </Link>
         </DropdownMenuItem>
         <DropdownMenuSeparator />
