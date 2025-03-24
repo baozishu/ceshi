@@ -157,7 +157,6 @@ export default function LoginPage() {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                   />
-                  <p className="text-xs text-muted-foreground">默认用户名: admin, 密码: password</p>
                 </div>
               </CardContent>
               <CardFooter>
