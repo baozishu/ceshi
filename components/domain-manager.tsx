@@ -1,14 +1,11 @@
 "use client"
 
 import { useState } from "react"
-import { useDomains } from "@/contexts/domain-context"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { CheckCircle2, RefreshCw, Plus, Trash2, Edit, ExternalLink, Globe, Calendar, ShoppingCart } from "lucide-react"
+import { useSite } from "@/contexts/site-context"
 import {
   Dialog,
   DialogContent,
@@ -18,9 +15,26 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
+import { useDomains } from "@/contexts/domain-context"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { format } from "date-fns"
+import { zhCN } from "date-fns/locale"
+import {
+  CheckCircle2,
+  RefreshCw,
+  Plus,
+  Trash2,
+  Edit,
+  ExternalLink,
+  Globe,
+  Calendar,
+  ShoppingCart,
+} from "lucide-react"
 import { RegistrarIcon } from "@/components/registrar-icon"
-import { useSite } from "@/contexts/site-context"
+import { Textarea } from "@/components/ui/textarea"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 
 // 域名类型定义
 interface Domain {
@@ -46,31 +60,64 @@ interface FriendlyLink {
 }
 
 export default function DomainManager() {
+  const router = useRouter()
+  const { securityQuestion, setSecurityQuestion, setSecurityAnswer } = useSite()
+  const [question, setQuestion] = useState(securityQuestion)
+  const [answer, setAnswer] = useState("")
+  const [showPasswordDialog, setShowPasswordDialog] = useState(false)
+  const [securityCode, setSecurityCode] = useState(localStorage.getItem("securityCode") || "")
+  const [showSecurityDialog, setShowSecurityDialog] = useState(false)
+  const { domains, soldDomains, updateDomains, updateSoldDomains } = useDomains()
+  const [newDomain, setNewDomain] = useState({ name: "", extension: "" })
+  const [editingSoldDomain, setEditingSoldDomain] = useState<Domain | null>(null)
+  const [newSoldDomain, setNewSoldDomain] = useState({
+    name: "",
+    extension: "",
+    soldTo: "",
+    soldDate: format(new Date(), "yyyy-MM-dd"),
+  })
+  const [isAddingDomain, setIsAddingDomain] = useState(false)
+  const [isAddingSoldDomain, setIsAddingSoldDomain] = useState(false)
+  const [isAddingLink, setIsAddingLink] = useState(false)
+
   const {
-    domains,
-    soldDomains,
     friendlyLinks,
-    updateDomains,
-    updateSoldDomains,
     updateFriendlyLinks,
     resetToDefaults,
   } = useDomains()
 
-  const { settings } = useSite()
+  const {
+    settings,
+    addRegistrarIcon,
+    updateRegistrarIcon,
+    removeRegistrarIcon,
+  } = useSite()
 
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null)
 
   // 域名编辑状态
   const [editingDomain, setEditingDomain] = useState<Domain | null>(null)
-  const [isAddingDomain, setIsAddingDomain] = useState(false)
-
-  // 已售域名编辑状态
-  const [editingSoldDomain, setEditingSoldDomain] = useState<Domain | null>(null)
-  const [isAddingSoldDomain, setIsAddingSoldDomain] = useState(false)
 
   // 友情链接编辑状态
   const [editingLink, setEditingLink] = useState<FriendlyLink | null>(null)
-  const [isAddingLink, setIsAddingLink] = useState(false)
+
+  // 添加注册商相关的状态变量
+  const [registrarIcons, setRegistrarIcons] = useState<{ [key: string]: string }>(settings.registrarIcons)
+  const [registrarNames, setRegistrarNames] = useState<{ [key: string]: string }>(settings.registrarNames)
+  const [newRegistrarName, setNewRegistrarName] = useState("")
+  const [newRegistrarDisplayName, setNewRegistrarDisplayName] = useState("")
+  const [newRegistrarIcon, setNewRegistrarIcon] = useState("")
+  const [editingRegistrar, setEditingRegistrar] = useState<string | null>(null)
+  const [editRegistrarName, setEditRegistrarName] = useState("")
+  const [editRegistrarDisplayName, setEditRegistrarDisplayName] = useState("")
+  const [editRegistrarIcon, setEditRegistrarIcon] = useState("")
+
+  // 添加域名统计状态
+  const [domainStats, setDomainStats] = useState({
+    total: 0,
+    active: 0,
+    sold: 0,
+  })
 
   // 显示成功消息
   const showSuccessMessage = (text: string) => {
@@ -169,7 +216,20 @@ export default function DomainManager() {
       return
     }
 
-    updateSoldDomains([...soldDomains, newDomain])
+    // 从待售域名列表中移除该域名
+    const updatedDomains = domains.filter(
+      (domain) => domain.name !== newDomain.name || domain.extension !== newDomain.extension
+    )
+    updateDomains(updatedDomains)
+
+    // 更新已售域名列表
+    const updatedSoldDomains = [...soldDomains, newDomain]
+    updateSoldDomains(updatedSoldDomains)
+
+    // 保存到本地存储
+    localStorage.setItem("domains", JSON.stringify(updatedDomains))
+    localStorage.setItem("soldDomains", JSON.stringify(updatedSoldDomains))
+
     setIsAddingSoldDomain(false)
     setEditingSoldDomain(null)
     showSuccessMessage("已售域名已添加")
@@ -252,6 +312,28 @@ export default function DomainManager() {
     return Object.keys(settings.registrarIcons || {})
   }
 
+  // 添加注册商相关的函数
+  const handleAddRegistrarIcon = () => {
+    if (!newRegistrarName.trim() || !newRegistrarDisplayName.trim() || !newRegistrarIcon.trim()) return
+    addRegistrarIcon(newRegistrarName, newRegistrarDisplayName, newRegistrarIcon)
+    setNewRegistrarName("")
+    setNewRegistrarDisplayName("")
+    setNewRegistrarIcon("")
+  }
+
+  const handleStartEdit = (name: string) => {
+    setEditingRegistrar(name)
+    setEditRegistrarName(name)
+    setEditRegistrarDisplayName(registrarNames[name] || "")
+    setEditRegistrarIcon(registrarIcons[name] || "")
+  }
+
+  const handleSaveEdit = () => {
+    if (!editingRegistrar || !editRegistrarName.trim() || !editRegistrarDisplayName.trim() || !editRegistrarIcon.trim()) return
+    updateRegistrarIcon(editingRegistrar, editRegistrarDisplayName, editRegistrarIcon)
+    setEditingRegistrar(null)
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -278,12 +360,167 @@ export default function DomainManager() {
         </Alert>
       )}
 
-      <Tabs defaultValue="active">
-        <TabsList className="grid w-full grid-cols-3">
+      <Tabs defaultValue="registrar">
+        <TabsList className="grid w-full grid-cols-4">
+          <TabsTrigger value="registrar">注册商</TabsTrigger>
           <TabsTrigger value="active">待售域名</TabsTrigger>
           <TabsTrigger value="sold">已售域名</TabsTrigger>
           <TabsTrigger value="links">友情链接</TabsTrigger>
         </TabsList>
+
+        {/* 注册商管理 */}
+        <TabsContent value="registrar">
+          <Card>
+            <CardHeader>
+              <CardTitle>注册商</CardTitle>
+              <CardDescription>管理域名注册商信息</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex justify-end mb-4">
+                <Dialog>
+                  <DialogTrigger asChild>
+                    <Button>
+                      <Plus className="h-4 w-4 mr-2" />
+                      添加注册商
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>添加注册商</DialogTitle>
+                      <DialogDescription>
+                        添加新的域名注册商信息。请确保SVG代码中的class属性已替换为className。
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4 py-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="new-registrar-name">注册商标识</Label>
+                        <Input
+                          id="new-registrar-name"
+                          value={newRegistrarName}
+                          onChange={(e) => setNewRegistrarName(e.target.value)}
+                          placeholder="例如：aliyun"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="new-registrar-display-name">注册商名称</Label>
+                        <Input
+                          id="new-registrar-display-name"
+                          value={newRegistrarDisplayName}
+                          onChange={(e) => setNewRegistrarDisplayName(e.target.value)}
+                          placeholder="例如：阿里云"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="new-registrar-icon">SVG 图标</Label>
+                        <Textarea
+                          id="new-registrar-icon"
+                          value={newRegistrarIcon}
+                          onChange={(e) => setNewRegistrarIcon(e.target.value)}
+                          placeholder="输入 SVG 代码"
+                          className="font-mono h-40"
+                        />
+                      </div>
+                    </div>
+                    <DialogFooter>
+                      <Button variant="outline" onClick={() => {
+                        setNewRegistrarName("")
+                        setNewRegistrarDisplayName("")
+                        setNewRegistrarIcon("")
+                      }}>
+                        取消
+                      </Button>
+                      <Button onClick={handleAddRegistrarIcon}>添加</Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {Object.entries(registrarIcons).map(([name, icon]) => (
+                  <Card key={name} className="overflow-hidden">
+                    <CardContent className="p-4">
+                      <div className="flex justify-between items-center mb-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 flex items-center justify-center">
+                            <RegistrarIcon iconName={name} className="w-6 h-6" />
+                          </div>
+                          <div>
+                            <h3 className="text-lg font-medium">{registrarNames[name]}</h3>
+                            <p className="text-sm text-gray-500">{name}</p>
+                          </div>
+                        </div>
+                        <div className="flex space-x-2">
+                          <Button variant="ghost" size="sm" onClick={() => handleStartEdit(name)}>
+                            编辑
+                          </Button>
+                          <Button variant="ghost" size="sm" onClick={() => removeRegistrarIcon(name)}>
+                            <Trash2 className="h-4 w-4 text-red-500" />
+                          </Button>
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-center p-4 bg-gray-50 rounded-md">
+                        <div dangerouslySetInnerHTML={{ __html: icon }} />
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+
+              {(!registrarIcons || Object.keys(registrarIcons).length === 0) && (
+                <div className="text-center py-8">
+                  <p className="text-muted-foreground">暂无注册商</p>
+                </div>
+              )}
+
+              <Dialog open={!!editingRegistrar} onOpenChange={() => setEditingRegistrar(null)}>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>编辑注册商</DialogTitle>
+                    <DialogDescription>
+                      编辑 {editingRegistrar} 的信息。请确保SVG代码中的class属性已替换为className。
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4 py-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-registrar-name">注册商标识</Label>
+                      <Input
+                        id="edit-registrar-name"
+                        value={editRegistrarName}
+                        onChange={(e) => setEditRegistrarName(e.target.value)}
+                        placeholder="例如：aliyun"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-registrar-display-name">注册商名称</Label>
+                      <Input
+                        id="edit-registrar-display-name"
+                        value={editRegistrarDisplayName}
+                        onChange={(e) => setEditRegistrarDisplayName(e.target.value)}
+                        placeholder="例如：阿里云"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-registrar-icon">SVG 图标</Label>
+                      <Textarea
+                        id="edit-registrar-icon"
+                        value={editRegistrarIcon}
+                        onChange={(e) => setEditRegistrarIcon(e.target.value)}
+                        placeholder="输入 SVG 代码"
+                        className="font-mono h-40"
+                      />
+                    </div>
+                  </div>
+                  <DialogFooter>
+                    <Button variant="outline" onClick={() => setEditingRegistrar(null)}>
+                      取消
+                    </Button>
+                    <Button onClick={handleSaveEdit}>保存</Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+            </CardContent>
+          </Card>
+        </TabsContent>
 
         {/* 待售域名管理 */}
         <TabsContent value="active">
@@ -647,6 +884,39 @@ export default function DomainManager() {
                       <DialogDescription>添加一个已售出的域名到您的列表中</DialogDescription>
                     </DialogHeader>
                     <div className="grid gap-4 py-4">
+                      {domains.length > 0 ? (
+                        <div className="space-y-2">
+                          <Label>从待售域名中选择</Label>
+                          <Select
+                            onValueChange={(value) => {
+                              const [name, extension] = value.split(".")
+                              setEditingSoldDomain({
+                                id: generateId(),
+                                name,
+                                extension: `.${extension}`,
+                                status: "sold",
+                                soldDate: new Date().toISOString().split("T")[0],
+                              })
+                            }}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="选择待售域名" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {domains.map((domain) => (
+                                <SelectItem key={domain.id} value={`${domain.name}${domain.extension}`}>
+                                  {domain.name}
+                                  {domain.extension}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      ) : (
+                        <div className="text-center py-4 text-muted-foreground">
+                          暂无待售域名可选
+                        </div>
+                      )}
                       <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
                           <Label htmlFor="sold-domain-name">域名</Label>

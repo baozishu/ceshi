@@ -31,7 +31,7 @@ export default function DashboardPage() {
   return (
     <DashboardLayout activeTab="dashboard">
       <div className="space-y-6">
-        <h1 className="text-3xl font-bold">控制台首页</h1>
+        <h1 className="text-3xl font-bold">控制台</h1>
 
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           <DashboardCard

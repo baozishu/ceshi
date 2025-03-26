@@ -20,6 +20,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
+import { RegistrarIcon } from "./registrar-icon"
 
 // 默认设置常量，用于重置
 const DEFAULT_SETTINGS = {
@@ -118,102 +119,6 @@ export default function SiteSettings() {
     }
   }
 
-  // 添加注册商图标
-  const handleAddRegistrarIcon = () => {
-    if (!newIconName.trim()) {
-      setMessage({ type: "error", text: "请输入注册商名称" })
-      setTimeout(() => setMessage(null), 3000)
-      return
-    }
-
-    if (!newIconSvg.trim()) {
-      setMessage({ type: "error", text: "请输入SVG代码" })
-      setTimeout(() => setMessage(null), 3000)
-      return
-    }
-
-    try {
-      addRegistrarIcon(newIconName.trim(), newIconSvg.trim())
-      setNewIconName("")
-      setNewIconSvg("")
-      setIsAddIconDialogOpen(false)
-      setMessage({ type: "success", text: "注册商图标已添加" })
-      setTimeout(() => setMessage(null), 3000)
-    } catch (error) {
-      console.error("添加注册商图标失败:", error)
-      setMessage({ type: "error", text: "添加注册商图标失败，请重试" })
-      setTimeout(() => setMessage(null), 3000)
-    }
-  }
-
-  // 打开编辑图标对话框
-  const openEditIconDialog = (name: string) => {
-    try {
-      setEditIconName(name)
-      setEditIconSvg(settings.registrarIcons[name] || "")
-      setIsEditIconDialogOpen(true)
-    } catch (error) {
-      console.error("打开编辑对话框失败:", error)
-      setMessage({ type: "error", text: "操作失败，请重试" })
-      setTimeout(() => setMessage(null), 3000)
-    }
-  }
-
-  // 更新注册商图标
-  const handleUpdateRegistrarIcon = () => {
-    if (!editIconSvg.trim()) {
-      setMessage({ type: "error", text: "请输入SVG代码" })
-      setTimeout(() => setMessage(null), 3000)
-      return
-    }
-
-    try {
-      updateRegistrarIcon(editIconName, editIconSvg.trim())
-      setIsEditIconDialogOpen(false)
-      setMessage({ type: "success", text: "注册商图标已更新" })
-      setTimeout(() => setMessage(null), 3000)
-    } catch (error) {
-      console.error("更新注册商图标失败:", error)
-      setMessage({ type: "error", text: "更新注册商图标失败，请重试" })
-      setTimeout(() => setMessage(null), 3000)
-    }
-  }
-
-  // 删除注册商图标
-  const handleRemoveRegistrarIcon = (name: string) => {
-    if (confirm(`确定要删除 ${name} 的图标吗？`)) {
-      try {
-        removeRegistrarIcon(name)
-        setMessage({ type: "success", text: "注册商图标已删除" })
-        setTimeout(() => setMessage(null), 3000)
-      } catch (error) {
-        console.error("删除注册商图标失败:", error)
-        setMessage({ type: "error", text: "删除注册商图标失败，请重试" })
-        setTimeout(() => setMessage(null), 3000)
-      }
-    }
-  }
-
-  // 重置所有设置
-  const handleResetSettings = () => {
-    if (confirm("确定要重置所有设置到默认值吗？")) {
-      try {
-        resetSettings()
-        setSiteName(DEFAULT_SETTINGS.siteName)
-        setLogoType(DEFAULT_SETTINGS.logoType)
-        setLogoText(DEFAULT_SETTINGS.logoText || "")
-        setLogoImage("")
-        setFavicon(DEFAULT_SETTINGS.favicon)
-        setMessage({ type: "success", text: "所有设置已重置为默认值" })
-        setTimeout(() => setMessage(null), 3000)
-      } catch (error) {
-        console.error("重置设置失败:", error)
-        setMessage({ type: "error", text: "重置设置失败，请重试" })
-        setTimeout(() => setMessage(null), 3000)
-      }
-    }
-  }
-
   // 显示加载状态
   if (loading) {
     return (
@@ -228,7 +133,7 @@ export default function SiteSettings() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold">网站设置</h2>
-        <Button variant="outline" onClick={handleResetSettings}>
+        <Button variant="outline" onClick={() => resetSettings()}>
           <RefreshCw className="h-4 w-4 mr-2" />
           重置为默认值
         </Button>
@@ -251,10 +156,9 @@ export default function SiteSettings() {
       )}
 
       <Tabs defaultValue="basic">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="basic">基本设置</TabsTrigger>
           <TabsTrigger value="favicon">网站图标</TabsTrigger>
-          <TabsTrigger value="registrar">注册商图标</TabsTrigger>
         </TabsList>
 
         {/* 基本设置 */}
@@ -350,121 +254,6 @@ export default function SiteSettings() {
             <CardFooter>
               <Button onClick={handleSaveFavicon}>保存Favicon</Button>
             </CardFooter>
-          </Card>
-        </TabsContent>
-
-        {/* 注册商图标设置 */}
-        <TabsContent value="registrar">
-          <Card>
-            <CardHeader>
-              <CardTitle>注册商图标</CardTitle>
-              <CardDescription>管理域名注册商的SVG图标</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex justify-end">
-                <Dialog open={isAddIconDialogOpen} onOpenChange={setIsAddIconDialogOpen}>
-                  <DialogTrigger asChild>
-                    <Button>
-                      <Plus className="h-4 w-4 mr-2" />
-                      添加注册商图标
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent>
-                    <DialogHeader>
-                      <DialogTitle>添加注册商图标</DialogTitle>
-                      <DialogDescription>
-                        添加新的域名注册商SVG图标。请确保SVG代码中的class属性已替换为className。
-                      </DialogDescription>
-                    </DialogHeader>
-                    <div className="space-y-4 py-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="new-icon-name">注册商名称</Label>
-                        <Input
-                          id="new-icon-name"
-                          value={newIconName}
-                          onChange={(e) => setNewIconName(e.target.value)}
-                          placeholder="例如：aliyun"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="new-icon-svg">SVG代码</Label>
-                        <Textarea
-                          id="new-icon-svg"
-                          value={newIconSvg}
-                          onChange={(e) => setNewIconSvg(e.target.value)}
-                          placeholder="粘贴SVG代码"
-                          className="font-mono h-40"
-                        />
-                      </div>
-                    </div>
-                    <DialogFooter>
-                      <Button variant="outline" onClick={() => setIsAddIconDialogOpen(false)}>
-                        取消
-                      </Button>
-                      <Button onClick={handleAddRegistrarIcon}>添加</Button>
-                    </DialogFooter>
-                  </DialogContent>
-                </Dialog>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                {Object.entries(settings.registrarIcons || {}).map(([name, svg]) => (
-                  <Card key={name} className="overflow-hidden">
-                    <CardContent className="p-4">
-                      <div className="flex justify-between items-center mb-4">
-                        <h3 className="text-lg font-medium">{name}</h3>
-                        <div className="flex space-x-2">
-                          <Button variant="ghost" size="sm" onClick={() => openEditIconDialog(name)}>
-                            编辑
-                          </Button>
-                          <Button variant="ghost" size="sm" onClick={() => handleRemoveRegistrarIcon(name)}>
-                            <Trash2 className="h-4 w-4 text-red-500" />
-                          </Button>
-                        </div>
-                      </div>
-                      <div className="flex items-center justify-center p-4 bg-gray-50 rounded-md">
-                        <div dangerouslySetInnerHTML={{ __html: svg }} />
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-
-              {(!settings.registrarIcons || Object.keys(settings.registrarIcons).length === 0) && (
-                <div className="text-center py-8">
-                  <p className="text-muted-foreground">暂无注册商图标</p>
-                </div>
-              )}
-
-              <Dialog open={isEditIconDialogOpen} onOpenChange={setIsEditIconDialogOpen}>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>编辑注册商图标</DialogTitle>
-                    <DialogDescription>
-                      编辑 {editIconName} 的SVG图标。请确保SVG代码中的class属性已替换为className。
-                    </DialogDescription>
-                  </DialogHeader>
-                  <div className="space-y-4 py-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="edit-icon-svg">SVG代码</Label>
-                      <Textarea
-                        id="edit-icon-svg"
-                        value={editIconSvg}
-                        onChange={(e) => setEditIconSvg(e.target.value)}
-                        placeholder="粘贴SVG代码"
-                        className="font-mono h-40"
-                      />
-                    </div>
-                  </div>
-                  <DialogFooter>
-                    <Button variant="outline" onClick={() => setIsEditIconDialogOpen(false)}>
-                      取消
-                    </Button>
-                    <Button onClick={handleUpdateRegistrarIcon}>保存</Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
-            </CardContent>
           </Card>
         </TabsContent>
       </Tabs>

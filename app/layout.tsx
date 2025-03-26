@@ -17,9 +17,7 @@ export default function RootLayout({
   return (
     <html lang="zh">
       <head>
-        {/* 添加一个默认的favicon，稍后会被SiteMetadata组件更新 */}
         <link rel="icon" href="/favicon.ico" />
-        <title>域名展示</title>
       </head>
       <body className={inter.className}>
         <AuthProvider>
@@ -37,11 +35,3 @@ export default function RootLayout({
     </html>
   )
 }
-
-
-
-import './globals.css'
-
-export const metadata = {
-      generator: 'v0.dev'
-    };

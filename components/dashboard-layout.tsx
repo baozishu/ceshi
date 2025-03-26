@@ -23,7 +23,7 @@ export default function DashboardLayout({ children, activeTab }: DashboardLayout
             icon={<LayoutDashboard className="h-5 w-5" />}
             isActive={activeTab === "dashboard"}
           >
-            控制台首页
+            控制台
           </NavItem>
           <NavItem href="/dashboard/domains" icon={<Settings className="h-5 w-5" />} isActive={activeTab === "domains"}>
             域名管理

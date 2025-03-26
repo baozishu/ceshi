@@ -60,12 +60,6 @@ export default function LoginPage() {
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1">
           <div className="flex items-center mb-2">
-            <Button variant="ghost" size="sm" asChild className="h-8 px-2">
-              <Link href="/">
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                返回首页
-              </Link>
-            </Button>
           </div>
           <CardTitle className="text-2xl font-bold text-center">管理员登录</CardTitle>
           <CardDescription className="text-center">输入密码登录后台管理系统</CardDescription>
