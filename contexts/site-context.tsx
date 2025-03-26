@@ -58,7 +58,7 @@ const SiteContext = createContext<SiteContextType>({
 })
 
 // 本地存储键
-const SITE_SETTINGS_KEY = "domain-display-site-settings-v2"
+const SITE_SETTINGS_KEY = "domain-display-site-settings"
 
 // 从本地存储获取设置
 function getSettingsFromStorage(): SiteSettings {
@@ -69,264 +69,171 @@ function getSettingsFromStorage(): SiteSettings {
   try {
     const storedSettings = localStorage.getItem(SITE_SETTINGS_KEY)
     if (storedSettings) {
-      const parsedSettings = JSON.parse(storedSettings)
-      console.log("成功从localStorage读取设置:", parsedSettings)
-      // 合并默认设置，确保结构完整
-      return { ...DEFAULT_SETTINGS, ...parsedSettings }
+      const parsed = JSON.parse(storedSettings)
+      // 确保所有必要的字段都存在
+      return {
+        siteName: parsed.siteName || DEFAULT_SETTINGS.siteName,
+        logoType: parsed.logoType || DEFAULT_SETTINGS.logoType,
+        logoText: parsed.logoText || DEFAULT_SETTINGS.logoText,
+        logoImage: parsed.logoImage || DEFAULT_SETTINGS.logoImage,
+        favicon: parsed.favicon || DEFAULT_SETTINGS.favicon,
+        registrarIcons: parsed.registrarIcons || DEFAULT_SETTINGS.registrarIcons,
+      }
     }
   } catch (error) {
-    console.error("从localStorage读取设置失败:", error)
+    console.error("Error reading settings from localStorage:", error)
   }
 
   return DEFAULT_SETTINGS
 }
 
 // 保存设置到本地存储
-function saveSettingsToStorage(settings: SiteSettings): boolean {
+function saveSettingsToStorage(settings: SiteSettings): void {
   if (typeof window === "undefined") {
-    return false
-  }
-
-  try {
-    const settingsString = JSON.stringify(settings)
-    localStorage.setItem(SITE_SETTINGS_KEY, settingsString)
-    console.log("成功保存设置到localStorage:", settings)
-    
-    // 验证保存是否成功
-    const savedSettings = localStorage.getItem(SITE_SETTINGS_KEY)
-    if (!savedSettings) {
-      console.error("保存验证失败，未找到保存的数据")
-      return false
-    }
-    
-    return true
-  } catch (error) {
-    console.error("保存设置到localStorage失败:", error)
-    return false
-  }
-}
-
-// 直接应用设置到文档
-function applySettingsToDocument(settings: SiteSettings): void {
-  if (typeof window === "undefined" || !document) {
     return
   }
 
   try {
-    // 更新文档标题
-    document.title = settings.siteName
-
-    // 更新favicon
-    const existingFavicon = document.querySelector('link[rel="icon"]')
-    if (existingFavicon && settings.favicon) {
-      existingFavicon.setAttribute('href', settings.favicon)
-    } else if (settings.favicon) {
-      const newFavicon = document.createElement('link')
-      newFavicon.rel = 'icon'
-      newFavicon.href = settings.favicon
-      document.head.appendChild(newFavicon)
-    }
-
-    // 更新apple-touch-icon
-    const existingAppleIcon = document.querySelector('link[rel="apple-touch-icon"]')
-    if (existingAppleIcon && settings.favicon) {
-      existingAppleIcon.setAttribute('href', settings.favicon)
-    } else if (settings.favicon) {
-      const newAppleIcon = document.createElement('link')
-      newAppleIcon.rel = 'apple-touch-icon'
-      newAppleIcon.href = settings.favicon
-      document.head.appendChild(newAppleIcon)
-    }
-    
-    console.log("已直接应用设置到文档", settings)
+    localStorage.setItem(SITE_SETTINGS_KEY, JSON.stringify(settings))
+    console.log("设置已保存到本地存储:", settings)
   } catch (error) {
-    console.error("应用设置到文档失败:", error)
+    console.error("Error saving settings to localStorage:", error)
   }
 }
 
 // 站点设置提供者组件
 export function SiteProvider({ children }: { children: ReactNode }) {
   const [settings, setSettings] = useState<SiteSettings>(DEFAULT_SETTINGS)
+  const [initialized, setInitialized] = useState(false)
 
   // 初始化：从本地存储加载设置
   useEffect(() => {
-    // 确保在客户端环境
-    if (typeof window !== "undefined") {
-      try {
-        const storedSettings = getSettingsFromStorage()
-        console.log("从存储加载初始设置")
-        setSettings(storedSettings)
-        
-        // 立即应用设置到文档
-        applySettingsToDocument(storedSettings)
-      } catch (error) {
-        console.error("加载设置时出错:", error)
-        setSettings(DEFAULT_SETTINGS)
-      }
+    try {
+      const storedSettings = getSettingsFromStorage()
+      console.log("从存储加载的设置:", storedSettings)
+      setSettings(storedSettings)
+      setInitialized(true)
+    } catch (error) {
+      console.error("初始化设置失败:", error)
+      setSettings(DEFAULT_SETTINGS)
+      setInitialized(true)
     }
   }, [])
 
-  // 标记设置状态已改变，通知其他组件更新
-  const notifySettingsChanged = (updatedSettings: SiteSettings) => {
-    if (typeof window !== "undefined" && document) {
-      try {
-        console.log("SiteContext发送设置更新事件", updatedSettings);
-        
-        // 创建自定义事件并触发
-        const event = new CustomEvent('siteSettingsChanged', { 
-          detail: updatedSettings
-        });
-        document.dispatchEvent(event);
-        
-        // 同时直接更新页面标题
-        if (updatedSettings.siteName) {
-          document.title = updatedSettings.siteName;
-        }
-      } catch (error) {
-        console.error("发送设置事件失败:", error);
-      }
-    }
-  }
-
   // 更新站点名称
   const updateSiteName = (name: string) => {
-    const updatedSettings = { ...settings, siteName: name }
-    setSettings(updatedSettings)
-    
-    // 保存并应用
-    if (saveSettingsToStorage(updatedSettings)) {
-      // 直接更新文档
-      if (typeof window !== "undefined" && document) {
-        document.title = name;
-      }
-      
-      // 通知其他组件
-      notifySettingsChanged(updatedSettings)
+    try {
+      console.log("更新站点名称:", name)
+      const updatedSettings = { ...settings, siteName: name }
+      setSettings(updatedSettings)
+      saveSettingsToStorage(updatedSettings)
+    } catch (error) {
+      console.error("更新站点名称失败:", error)
     }
   }
 
   // 更新Logo类型
   const updateLogoType = (type: "text" | "image") => {
-    const updatedSettings = { ...settings, logoType: type }
-    setSettings(updatedSettings)
-    
-    if (saveSettingsToStorage(updatedSettings)) {
-      notifySettingsChanged(updatedSettings)
+    try {
+      console.log("更新Logo类型:", type)
+      const updatedSettings = { ...settings, logoType: type }
+      setSettings(updatedSettings)
+      saveSettingsToStorage(updatedSettings)
+    } catch (error) {
+      console.error("更新Logo类型失败:", error)
     }
   }
 
   // 更新Logo图片
   const updateLogoImage = (url: string) => {
-    const updatedSettings = { ...settings, logoImage: url }
-    setSettings(updatedSettings)
-    
-    if (saveSettingsToStorage(updatedSettings)) {
-      notifySettingsChanged(updatedSettings)
+    try {
+      console.log("更新Logo图片:", url)
+      const updatedSettings = { ...settings, logoImage: url }
+      setSettings(updatedSettings)
+      saveSettingsToStorage(updatedSettings)
+    } catch (error) {
+      console.error("更新Logo图片失败:", error)
     }
   }
 
   // 更新Logo文字
   const updateLogoText = (text: string) => {
-    const updatedSettings = { ...settings, logoText: text }
-    setSettings(updatedSettings)
-    
-    if (saveSettingsToStorage(updatedSettings)) {
-      notifySettingsChanged(updatedSettings)
+    try {
+      console.log("更新Logo文字:", text)
+      const updatedSettings = { ...settings, logoText: text }
+      setSettings(updatedSettings)
+      saveSettingsToStorage(updatedSettings)
+    } catch (error) {
+      console.error("更新Logo文字失败:", error)
     }
   }
 
   // 更新Favicon
   const updateFavicon = (url: string) => {
-    const updatedSettings = { ...settings, favicon: url }
-    setSettings(updatedSettings)
-    
-    if (saveSettingsToStorage(updatedSettings)) {
-      // 直接更新favicon
-      if (typeof window !== "undefined" && document) {
-        const existingFavicon = document.querySelector('link[rel="icon"]')
-        if (existingFavicon) {
-          existingFavicon.setAttribute('href', url)
-        } else {
-          const newFavicon = document.createElement('link')
-          newFavicon.rel = 'icon'
-          newFavicon.href = url
-          document.head.appendChild(newFavicon)
-        }
-        
-        // 更新apple-touch-icon
-        const existingAppleIcon = document.querySelector('link[rel="apple-touch-icon"]')
-        if (existingAppleIcon) {
-          existingAppleIcon.setAttribute('href', url)
-        } else {
-          const newAppleIcon = document.createElement('link')
-          newAppleIcon.rel = 'apple-touch-icon'
-          newAppleIcon.href = url
-          document.head.appendChild(newAppleIcon)
-        }
-      }
-      
-      notifySettingsChanged(updatedSettings)
+    try {
+      console.log("更新Favicon:", url)
+      const updatedSettings = { ...settings, favicon: url }
+      setSettings(updatedSettings)
+      saveSettingsToStorage(updatedSettings)
+    } catch (error) {
+      console.error("更新Favicon失败:", error)
     }
   }
 
   // 添加注册商图标
   const addRegistrarIcon = (name: string, svg: string) => {
-    if (!name.trim() || !svg.trim()) return
+    try {
+      if (!name.trim() || !svg.trim()) return
 
-    const updatedIcons = { ...settings.registrarIcons, [name]: svg }
-    const updatedSettings = { ...settings, registrarIcons: updatedIcons }
-    setSettings(updatedSettings)
-    saveSettingsToStorage(updatedSettings)
-    notifySettingsChanged(updatedSettings)
+      const updatedIcons = { ...settings.registrarIcons, [name]: svg }
+      const updatedSettings = { ...settings, registrarIcons: updatedIcons }
+      setSettings(updatedSettings)
+      saveSettingsToStorage(updatedSettings)
+    } catch (error) {
+      console.error("添加注册商图标失败:", error)
+    }
   }
 
   // 更新注册商图标
   const updateRegistrarIcon = (name: string, svg: string) => {
-    if (!name.trim() || !svg.trim() || !settings.registrarIcons[name]) return
+    try {
+      if (!name.trim() || !svg.trim() || !settings.registrarIcons[name]) return
 
-    const updatedIcons = { ...settings.registrarIcons, [name]: svg }
-    const updatedSettings = { ...settings, registrarIcons: updatedIcons }
-    setSettings(updatedSettings)
-    saveSettingsToStorage(updatedSettings)
-    notifySettingsChanged(updatedSettings)
+      const updatedIcons = { ...settings.registrarIcons, [name]: svg }
+      const updatedSettings = { ...settings, registrarIcons: updatedIcons }
+      setSettings(updatedSettings)
+      saveSettingsToStorage(updatedSettings)
+    } catch (error) {
+      console.error("更新注册商图标失败:", error)
+    }
   }
 
   // 删除注册商图标
   const removeRegistrarIcon = (name: string) => {
-    if (!settings.registrarIcons[name]) return
+    try {
+      if (!settings.registrarIcons[name]) return
 
-    const updatedIcons = { ...settings.registrarIcons }
-    delete updatedIcons[name]
-    const updatedSettings = { ...settings, registrarIcons: updatedIcons }
-    setSettings(updatedSettings)
-    saveSettingsToStorage(updatedSettings)
-    notifySettingsChanged(updatedSettings)
-  }
-
-  // 重置设置为默认值
-  const resetSettings = () => {
-    setSettings(DEFAULT_SETTINGS)
-    
-    // 清除本地存储
-    if (typeof window !== "undefined") {
-      try {
-        // 清除所有可能的旧版存储
-        localStorage.removeItem(SITE_SETTINGS_KEY)
-        localStorage.removeItem("domain-display-site-settings")
-        localStorage.removeItem("site_settings")
-        
-        // 重新保存默认设置
-        saveSettingsToStorage(DEFAULT_SETTINGS)
-        
-        console.log("已重置设置为默认值")
-        notifySettingsChanged(DEFAULT_SETTINGS)
-      } catch (error) {
-        console.error("重置设置时出错:", error)
-      }
+      const updatedIcons = { ...settings.registrarIcons }
+      delete updatedIcons[name]
+      const updatedSettings = { ...settings, registrarIcons: updatedIcons }
+      setSettings(updatedSettings)
+      saveSettingsToStorage(updatedSettings)
+    } catch (error) {
+      console.error("删除注册商图标失败:", error)
     }
   }
 
-  const contextValue: SiteContextType = {
+  // 重置设置
+  const resetSettings = () => {
+    try {
+      setSettings(DEFAULT_SETTINGS)
+      saveSettingsToStorage(DEFAULT_SETTINGS)
+    } catch (error) {
+      console.error("重置设置失败:", error)
+    }
+  }
+
+  const contextValue = {
     settings,
     updateSiteName,
     updateLogoType,
@@ -337,6 +244,11 @@ export function SiteProvider({ children }: { children: ReactNode }) {
     updateRegistrarIcon,
     removeRegistrarIcon,
     resetSettings,
+  }
+
+  // 如果尚未初始化，返回默认值
+  if (!initialized) {
+    return <SiteContext.Provider value={contextValue}>{children}</SiteContext.Provider>
   }
 
   return <SiteContext.Provider value={contextValue}>{children}</SiteContext.Provider>
