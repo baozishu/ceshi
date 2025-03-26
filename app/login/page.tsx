@@ -92,7 +92,6 @@ export default function LoginPage() {
                 />
                 <KeyRound className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               </div>
-              <p className="text-xs text-muted-foreground">默认密码: admin123</p>
             </div>
           </CardContent>
           <CardFooter>
