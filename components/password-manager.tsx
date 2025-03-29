@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { CheckCircle2, AlertCircle, RefreshCw } from "lucide-react"
+import { CheckCircle2, AlertCircle, RefreshCw, Save } from "lucide-react"
 
 export default function PasswordManager() {
   const { updatePassword, resetPassword, login } = useAuth()
@@ -17,8 +17,34 @@ export default function PasswordManager() {
   const [newPassword, setNewPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null)
+  const [isBackingUp, setIsBackingUp] = useState(false)
 
-  const handleUpdatePassword = useCallback(() => {
+  // 备份密码到 backup.json
+  const backupPassword = async (password: string) => {
+    try {
+      setIsBackingUp(true)
+      const response = await fetch("/api/password-backup", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ password }),
+      })
+
+      if (!response.ok) {
+        throw new Error("备份密码失败")
+      }
+
+      return await response.json()
+    } catch (error) {
+      console.error("备份密码时出错:", error)
+      throw error
+    } finally {
+      setIsBackingUp(false)
+    }
+  }
+
+  const handleUpdatePassword = useCallback(async () => {
     setMessage(null)
 
     if (!currentPassword || !newPassword || !confirmPassword) {
@@ -36,11 +62,21 @@ export default function PasswordManager() {
       return
     }
 
-    updatePassword(newPassword)
-    setCurrentPassword("")
-    setNewPassword("")
-    setConfirmPassword("")
-    setMessage({ type: "success", text: "密码已成功更新" })
+    try {
+      // 更新密码
+      updatePassword(newPassword)
+
+      // 备份密码
+      await backupPassword(newPassword)
+
+      setCurrentPassword("")
+      setNewPassword("")
+      setConfirmPassword("")
+      setMessage({ type: "success", text: "密码已成功更新并备份" })
+    } catch (error) {
+      console.error("更新密码时出错:", error)
+      setMessage({ type: "error", text: "密码已更新，但备份失败" })
+    }
   }, [currentPassword, newPassword, confirmPassword, updatePassword, login])
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -48,10 +84,19 @@ export default function PasswordManager() {
     handleUpdatePassword()
   }
 
-  const handleResetPassword = () => {
+  const handleResetPassword = async () => {
     if (confirm("确定要重置密码为默认值吗？")) {
-      resetPassword()
-      setMessage({ type: "success", text: "密码已重置为默认值: admin123" })
+      try {
+        resetPassword()
+
+        // 备份默认密码
+        await backupPassword("admin123")
+
+        setMessage({ type: "success", text: "密码已重置为默认值: admin123 并已备份" })
+      } catch (error) {
+        console.error("重置密码时出错:", error)
+        setMessage({ type: "error", text: "密码已重置，但备份失败" })
+      }
     }
   }
 
@@ -59,7 +104,7 @@ export default function PasswordManager() {
     <Card>
       <CardHeader>
         <CardTitle>密码管理</CardTitle>
-        <CardDescription>更新或重置管理员密码</CardDescription>
+        <CardDescription>更新或重置管理员密码（自动备份到 backup.json）</CardDescription>
       </CardHeader>
       <form onSubmit={handleSubmit}>
         <CardContent className="space-y-4">
@@ -110,8 +155,17 @@ export default function PasswordManager() {
           </div>
         </CardContent>
         <CardFooter className="flex justify-between">
-          <Button type="submit">更新密码</Button>
-          <Button type="button" variant="outline" onClick={handleResetPassword}>
+          <Button type="submit" disabled={isBackingUp}>
+            {isBackingUp ? (
+              <>
+                <Save className="h-4 w-4 mr-2 animate-pulse" />
+                备份中...
+              </>
+            ) : (
+              <>更新密码</>
+            )}
+          </Button>
+          <Button type="button" variant="outline" onClick={handleResetPassword} disabled={isBackingUp}>
             <RefreshCw className="h-4 w-4 mr-2" />
             重置为默认密码
           </Button>

@@ -16,6 +16,13 @@ import {
   ArrowRight,
   Loader2,
   ExternalLink,
+  Calendar,
+  Clock,
+  RefreshCw,
+  HardDrive,
+  FileText,
+  Trash2,
+  Image,
 } from "lucide-react"
 import { Progress } from "@/components/ui/progress"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -27,24 +34,50 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { Badge } from "@/components/ui/badge"
+import { Separator } from "@/components/ui/separator"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Switch } from "@/components/ui/switch"
+import { useDomains } from "@/contexts/domain-context"
+import { useSite } from "@/contexts/site-context"
+import { useAuth } from "@/contexts/auth-context"
 
 // 备份数据类型
 interface BackupData {
   version: string
   timestamp: number
-  auth: {
-    password: string
-  }
+  registrarIcons: Record<string, string>
   domains: any[]
   soldDomains: any[]
   friendlyLinks: any[]
-  siteSettings?: any
+  siteSettings: any
+  auth: {
+    passwordHash: string
+  }
+}
+
+// 备份历史记录类型
+interface BackupHistory {
+  filename: string
+  timestamp: number
+  size: number
+  items: {
+    domains: number
+    soldDomains: number
+    friendlyLinks: number
+    registrarIcons: number
+  }
 }
 
 // 当前备份版本
-const BACKUP_VERSION = "1.1.0"
+const BACKUP_VERSION = "1.0.0"
 
 export default function BackupManager() {
+  const { domains, soldDomains, friendlyLinks, updateDomains, updateSoldDomains, updateFriendlyLinks } = useDomains()
+  const { settings, updateSiteName, updateLogoType, updateLogoImage, updateLogoText, updateFavicon } = useSite()
+  const { updatePassword } = useAuth()
+
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [isExporting, setIsExporting] = useState(false)
@@ -56,14 +89,28 @@ export default function BackupManager() {
     domainsCount: number
     soldDomainsCount: number
     friendlyLinksCount: number
+    registrarIconsCount: number
   }>({
     lastBackup: null,
     domainsCount: 0,
     soldDomainsCount: 0,
     friendlyLinksCount: 0,
+    registrarIconsCount: 0,
   })
   const [showImportConfirm, setShowImportConfirm] = useState(false)
   const [importFile, setImportFile] = useState<File | null>(null)
+  const [backupHistory, setBackupHistory] = useState<BackupHistory[]>([])
+  const [backupOptions, setBackupOptions] = useState({
+    includeDomains: true,
+    includeSoldDomains: true,
+    includeFriendlyLinks: true,
+    includeRegistrarIcons: true,
+    includeSiteSettings: true,
+    includePassword: true,
+  })
+  const [backupName, setBackupName] = useState("")
+  const [showBackupDetails, setShowBackupDetails] = useState(false)
+  const [selectedBackup, setSelectedBackup] = useState<BackupHistory | null>(null)
 
   // 用于存储定时器ID，以便在组件卸载时清除
   const timeoutRef = useRef<NodeJS.Timeout | null>(null)
@@ -81,6 +128,7 @@ export default function BackupManager() {
   // 加载备份统计信息
   useEffect(() => {
     loadBackupStats()
+    loadBackupHistory()
   }, [])
 
   // 加载备份统计信息
@@ -90,67 +138,109 @@ export default function BackupManager() {
       const lastBackupStr = localStorage.getItem("domain-display-last-backup")
       const lastBackup = lastBackupStr ? new Date(Number.parseInt(lastBackupStr)).toLocaleString() : null
 
-      // 获取域名数量
-      const domainsStr = localStorage.getItem("domain-display-domains")
-      const domains = domainsStr ? JSON.parse(domainsStr) : []
-
-      // 获取已售域名数量
-      const soldDomainsStr = localStorage.getItem("domain-display-sold-domains")
-      const soldDomains = soldDomainsStr ? JSON.parse(soldDomainsStr) : []
-
-      // 获取友情链接数量
-      const friendlyLinksStr = localStorage.getItem("domain-display-friendly-links")
-      const friendlyLinks = friendlyLinksStr ? JSON.parse(friendlyLinksStr) : []
-
       setBackupStats({
         lastBackup,
         domainsCount: domains.length,
         soldDomainsCount: soldDomains.length,
         friendlyLinksCount: friendlyLinks.length,
+        registrarIconsCount: Object.keys(settings.registrarIcons || {}).length,
       })
+
+      // 设置默认备份名称
+      const date = new Date()
+      const formattedDate = `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, "0")}-${date
+        .getDate()
+        .toString()
+        .padStart(2, "0")}`
+      setBackupName(`domain-backup-${formattedDate}`)
     } catch (error) {
       console.error("加载备份统计信息失败:", error)
     }
   }
 
-  // 创建备份
-  const createBackup = (): BackupData => {
-    // 从localStorage获取数据
-    let auth = { password: "admin123" }
-    let domains = []
-    let soldDomains = []
-    let friendlyLinks = []
-    let siteSettings = null
-
+  // 加载备份历史
+  const loadBackupHistory = () => {
     try {
-      // 安全地获取数据
-      const authStr = localStorage.getItem("domain-display-auth")
-      const domainsStr = localStorage.getItem("domain-display-domains")
-      const soldDomainsStr = localStorage.getItem("domain-display-sold-domains")
-      const friendlyLinksStr = localStorage.getItem("domain-display-friendly-links")
-      const siteSettingsStr = localStorage.getItem("domain-display-site-settings")
+      // 模拟从本地存储加载备份历史
+      // 在实际应用中，这应该从服务器或本地存储加载
+      const mockHistory: BackupHistory[] = [
+        {
+          filename: "backup-2023-05-15.json",
+          timestamp: new Date("2023-05-15").getTime(),
+          size: 24500,
+          items: {
+            domains: 5,
+            soldDomains: 3,
+            friendlyLinks: 5,
+            registrarIcons: 5,
+          },
+        },
+        {
+          filename: "backup-2023-06-20.json",
+          timestamp: new Date("2023-06-20").getTime(),
+          size: 26800,
+          items: {
+            domains: 6,
+            soldDomains: 3,
+            friendlyLinks: 6,
+            registrarIcons: 5,
+          },
+        },
+        {
+          filename: "backup-2023-07-10.json",
+          timestamp: new Date("2023-07-10").getTime(),
+          size: 28200,
+          items: {
+            domains: 7,
+            soldDomains: 4,
+            friendlyLinks: 6,
+            registrarIcons: 6,
+          },
+        },
+      ]
 
-      if (authStr) auth = JSON.parse(authStr)
-      if (domainsStr) domains = JSON.parse(domainsStr)
-      if (soldDomainsStr) soldDomains = JSON.parse(soldDomainsStr)
-      if (friendlyLinksStr) friendlyLinks = JSON.parse(friendlyLinksStr)
-      if (siteSettingsStr) siteSettings = JSON.parse(siteSettingsStr)
+      setBackupHistory(mockHistory)
     } catch (error) {
-      console.error("读取数据失败:", error)
+      console.error("加载备份历史失败:", error)
+    }
+  }
+
+  // 创建备份
+  const createBackup = async (): Promise<BackupData> => {
+    // 从API获取备份数据
+    const response = await fetch("/api/backup")
+    if (!response.ok) {
+      throw new Error("Failed to create backup")
     }
 
-    // 创建备份对象
-    return {
-      version: BACKUP_VERSION,
-      timestamp: Date.now(),
-      auth: {
-        password: auth.password || "admin123",
-      },
-      domains,
-      soldDomains,
-      friendlyLinks,
-      siteSettings,
+    const backupData = await response.json()
+
+    // 根据选项过滤数据
+    if (!backupOptions.includeDomains) {
+      backupData.domains = []
     }
+
+    if (!backupOptions.includeSoldDomains) {
+      backupData.soldDomains = []
+    }
+
+    if (!backupOptions.includeFriendlyLinks) {
+      backupData.friendlyLinks = []
+    }
+
+    if (!backupOptions.includeRegistrarIcons) {
+      backupData.registrarIcons = {}
+    }
+
+    if (!backupOptions.includeSiteSettings) {
+      backupData.siteSettings = null
+    }
+
+    if (!backupOptions.includePassword) {
+      backupData.auth = { passwordHash: "" }
+    }
+
+    return backupData
   }
 
   // 验证备份数据
@@ -159,14 +249,13 @@ export default function BackupManager() {
     if (!data || typeof data !== "object") return false
     if (!data.version || !data.timestamp) return false
 
-    // 检查认证数据
-    if (!data.auth || typeof data.auth !== "object") return false
-    if (typeof data.auth.password !== "string") return false
-
-    // 检查域名数据
+    // 检查数据结构
     if (!Array.isArray(data.domains)) return false
     if (!Array.isArray(data.soldDomains)) return false
     if (!Array.isArray(data.friendlyLinks)) return false
+    if (!data.registrarIcons || typeof data.registrarIcons !== "object") return false
+    if (!data.siteSettings || typeof data.siteSettings !== "object") return false
+    if (!data.auth || typeof data.auth !== "object") return false
 
     return true
   }
@@ -189,7 +278,7 @@ export default function BackupManager() {
       }, 50)
 
       // 创建备份数据
-      const backup = createBackup()
+      const backup = await createBackup()
 
       // 转换为JSON字符串
       const backupJson = JSON.stringify(backup, null, 2)
@@ -205,10 +294,8 @@ export default function BackupManager() {
       a.style.display = "none"
       a.href = url
 
-      // 设置文件名（使用当前日期）
-      const date = new Date()
-      const formattedDate = `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, "0")}-${date.getDate().toString().padStart(2, "0")}`
-      a.download = `domain-display-backup-${formattedDate}.json`
+      // 设置文件名
+      a.download = `${backupName || "domain-backup"}.json`
 
       // 触发下载
       document.body.appendChild(a)
@@ -224,6 +311,20 @@ export default function BackupManager() {
 
         // 更新统计信息
         loadBackupStats()
+
+        // 更新备份历史
+        const newBackup: BackupHistory = {
+          filename: `${backupName || "domain-backup"}.json`,
+          timestamp: Date.now(),
+          size: new Blob([backupJson]).size,
+          items: {
+            domains: backupOptions.includeDomains ? domains.length : 0,
+            soldDomains: backupOptions.includeSoldDomains ? soldDomains.length : 0,
+            friendlyLinks: backupOptions.includeFriendlyLinks ? friendlyLinks.length : 0,
+            registrarIcons: backupOptions.includeRegistrarIcons ? Object.keys(settings.registrarIcons || {}).length : 0,
+          },
+        }
+        setBackupHistory([newBackup, ...backupHistory])
 
         // 完成进度
         clearInterval(interval)
@@ -279,31 +380,39 @@ export default function BackupManager() {
         return false
       }
 
-      // 保存认证数据
-      let currentAuth = { isLoggedIn: false, password: "admin123" }
-      try {
-        const authStr = localStorage.getItem("domain-display-auth")
-        if (authStr) {
-          currentAuth = JSON.parse(authStr)
-        }
-      } catch (e) {
-        console.error("读取认证数据失败:", e)
+      // 导入数据到API
+      const response = await fetch("/api/backup", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: backupJson,
+      })
+
+      if (!response.ok) {
+        clearInterval(interval)
+        return false
       }
 
-      // 保存所有数据
-      const updatedAuth = {
-        ...currentAuth,
-        password: backup.auth.password,
+      // 更新本地状态
+      if (backup.domains && backup.domains.length > 0) {
+        updateDomains(backup.domains)
       }
 
-      localStorage.setItem("domain-display-auth", JSON.stringify(updatedAuth))
-      localStorage.setItem("domain-display-domains", JSON.stringify(backup.domains))
-      localStorage.setItem("domain-display-sold-domains", JSON.stringify(backup.soldDomains))
-      localStorage.setItem("domain-display-friendly-links", JSON.stringify(backup.friendlyLinks))
+      if (backup.soldDomains && backup.soldDomains.length > 0) {
+        updateSoldDomains(backup.soldDomains)
+      }
 
-      // 如果有站点设置，也保存它
+      if (backup.friendlyLinks && backup.friendlyLinks.length > 0) {
+        updateFriendlyLinks(backup.friendlyLinks)
+      }
+
       if (backup.siteSettings) {
-        localStorage.setItem("domain-display-site-settings", JSON.stringify(backup.siteSettings))
+        updateSiteName(backup.siteSettings.siteName)
+        updateLogoType(backup.siteSettings.logoType)
+        updateLogoImage(backup.siteSettings.logoImage || "")
+        updateLogoText(backup.siteSettings.logoText || "")
+        updateFavicon(backup.siteSettings.favicon)
       }
 
       // 保存最后备份时间
@@ -400,9 +509,38 @@ export default function BackupManager() {
     return (bytes / (1024 * 1024)).toFixed(2) + " MB"
   }
 
+  // 格式化日期
+  const formatDate = (timestamp: number): string => {
+    return new Date(timestamp).toLocaleDateString("zh-CN", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    })
+  }
+
+  // 格式化时间
+  const formatTime = (timestamp: number): string => {
+    return new Date(timestamp).toLocaleTimeString("zh-CN", {
+      hour: "2-digit",
+      minute: "2-digit",
+    })
+  }
+
+  // 查看备份详情
+  const viewBackupDetails = (backup: BackupHistory) => {
+    setSelectedBackup(backup)
+    setShowBackupDetails(true)
+  }
+
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-bold">备份管理</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-3xl font-bold">备份管理</h1>
+        <Button variant="outline" size="sm" onClick={loadBackupStats}>
+          <RefreshCw className="h-4 w-4 mr-2" />
+          刷新
+        </Button>
+      </div>
 
       {message && (
         <Alert
@@ -421,9 +559,10 @@ export default function BackupManager() {
       )}
 
       <Tabs defaultValue="overview">
-        <TabsList className="grid w-full grid-cols-2">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="overview">备份概览</TabsTrigger>
           <TabsTrigger value="actions">备份操作</TabsTrigger>
+          <TabsTrigger value="history">备份历史</TabsTrigger>
         </TabsList>
 
         {/* 备份概览 */}
@@ -434,7 +573,7 @@ export default function BackupManager() {
               <CardDescription>查看您的数据备份状态</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <Card>
                   <CardContent className="pt-6">
                     <div className="flex flex-col items-center justify-center text-center">
@@ -462,6 +601,15 @@ export default function BackupManager() {
                     </div>
                   </CardContent>
                 </Card>
+                <Card>
+                  <CardContent className="pt-6">
+                    <div className="flex flex-col items-center justify-center text-center">
+                      <Image className="h-8 w-8 text-amber-500 mb-2" />
+                      <h3 className="text-2xl font-bold">{backupStats.registrarIconsCount}</h3>
+                      <p className="text-sm text-muted-foreground">注册商图标</p>
+                    </div>
+                  </CardContent>
+                </Card>
               </div>
 
               <Card>
@@ -481,7 +629,11 @@ export default function BackupManager() {
                     <div className="flex justify-between">
                       <span className="text-sm font-medium">总数据项</span>
                       <span className="text-sm text-muted-foreground">
-                        {backupStats.domainsCount + backupStats.soldDomainsCount + backupStats.friendlyLinksCount} 项
+                        {backupStats.domainsCount +
+                          backupStats.soldDomainsCount +
+                          backupStats.friendlyLinksCount +
+                          backupStats.registrarIconsCount}{" "}
+                        项
                       </span>
                     </div>
                   </div>
@@ -504,8 +656,8 @@ export default function BackupManager() {
               <CardTitle>备份操作</CardTitle>
               <CardDescription>导出或导入您的数据备份</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid gap-4 md:grid-cols-2">
+            <CardContent className="space-y-6">
+              <div className="grid gap-6 md:grid-cols-2">
                 <Card>
                   <CardHeader className="pb-2">
                     <div className="flex items-center">
@@ -516,10 +668,85 @@ export default function BackupManager() {
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-4">
-                      <div className="flex items-center justify-between text-sm">
-                        <span>包含内容：</span>
-                        <span className="text-muted-foreground">域名、设置、密码</span>
+                      <div className="space-y-2">
+                        <Label htmlFor="backup-name">备份文件名</Label>
+                        <Input
+                          id="backup-name"
+                          value={backupName}
+                          onChange={(e) => setBackupName(e.target.value)}
+                          placeholder="输入备份文件名"
+                        />
+                        <p className="text-xs text-muted-foreground">文件将以 .json 格式保存</p>
                       </div>
+
+                      <Separator />
+
+                      <div className="space-y-4">
+                        <h4 className="text-sm font-medium">备份内容选项</h4>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="flex items-center space-x-2">
+                            <Switch
+                              id="include-domains"
+                              checked={backupOptions.includeDomains}
+                              onCheckedChange={(checked) =>
+                                setBackupOptions((prev) => ({ ...prev, includeDomains: checked }))
+                              }
+                            />
+                            <Label htmlFor="include-domains">待售域名</Label>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <Switch
+                              id="include-sold-domains"
+                              checked={backupOptions.includeSoldDomains}
+                              onCheckedChange={(checked) =>
+                                setBackupOptions((prev) => ({ ...prev, includeSoldDomains: checked }))
+                              }
+                            />
+                            <Label htmlFor="include-sold-domains">已售域名</Label>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <Switch
+                              id="include-friendly-links"
+                              checked={backupOptions.includeFriendlyLinks}
+                              onCheckedChange={(checked) =>
+                                setBackupOptions((prev) => ({ ...prev, includeFriendlyLinks: checked }))
+                              }
+                            />
+                            <Label htmlFor="include-friendly-links">友情链接</Label>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <Switch
+                              id="include-registrar-icons"
+                              checked={backupOptions.includeRegistrarIcons}
+                              onCheckedChange={(checked) =>
+                                setBackupOptions((prev) => ({ ...prev, includeRegistrarIcons: checked }))
+                              }
+                            />
+                            <Label htmlFor="include-registrar-icons">注册商图标</Label>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <Switch
+                              id="include-site-settings"
+                              checked={backupOptions.includeSiteSettings}
+                              onCheckedChange={(checked) =>
+                                setBackupOptions((prev) => ({ ...prev, includeSiteSettings: checked }))
+                              }
+                            />
+                            <Label htmlFor="include-site-settings">网站设置</Label>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <Switch
+                              id="include-password"
+                              checked={backupOptions.includePassword}
+                              onCheckedChange={(checked) =>
+                                setBackupOptions((prev) => ({ ...prev, includePassword: checked }))
+                              }
+                            />
+                            <Label htmlFor="include-password">密码（哈希值）</Label>
+                          </div>
+                        </div>
+                      </div>
+
                       {isExporting && (
                         <div className="space-y-2">
                           <div className="flex justify-between text-sm">
@@ -562,6 +789,16 @@ export default function BackupManager() {
                         <span>支持格式：</span>
                         <span className="text-muted-foreground">JSON 备份文件</span>
                       </div>
+
+                      <div
+                        className="rounded-lg border-2 border-dashed border-muted-foreground/25 p-6 text-center hover:bg-accent/50 transition-colors cursor-pointer"
+                        onClick={triggerFileInput}
+                      >
+                        <HardDrive className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
+                        <p className="text-sm font-medium mb-1">点击或拖放文件到此处</p>
+                        <p className="text-xs text-muted-foreground">支持 .json 格式的备份文件</p>
+                      </div>
+
                       {isImporting && (
                         <div className="space-y-2">
                           <div className="flex justify-between text-sm">
@@ -600,12 +837,86 @@ export default function BackupManager() {
             </CardContent>
             <CardFooter className="flex flex-col space-y-2">
               <p className="text-xs text-muted-foreground">
-                备份文件包含您的所有数据，包括管理员密码。请妥善保管您的备份文件。
+                备份文件包含您的所有数据，包括管理员密码的哈希值。请妥善保管您的备份文件。
               </p>
               <p className="text-xs text-muted-foreground">
                 导入备份将覆盖当前的所有数据，请确保您已经备份了当前数据。
               </p>
             </CardFooter>
+          </Card>
+        </TabsContent>
+
+        {/* 备份历史 */}
+        <TabsContent value="history">
+          <Card>
+            <CardHeader>
+              <CardTitle>备份历史</CardTitle>
+              <CardDescription>查看和管理您的备份历史记录</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {backupHistory.length > 0 ? (
+                <div className="space-y-4">
+                  {backupHistory.map((backup, index) => (
+                    <Card key={index} className="overflow-hidden">
+                      <CardContent className="p-0">
+                        <div className="flex items-center justify-between p-4 border-b">
+                          <div className="flex items-center">
+                            <FileJson className="h-5 w-5 text-primary mr-2" />
+                            <span className="text-sm font-medium">{backup.filename}</span>
+                          </div>
+                          <Badge variant="outline" className="text-xs">
+                            {formatFileSize(backup.size)}
+                          </Badge>
+                        </div>
+                        <div className="p-4">
+                          <div className="grid grid-cols-2 gap-2 mb-4">
+                            <div className="flex items-center text-xs text-muted-foreground">
+                              <Calendar className="h-3 w-3 mr-1" />
+                              {formatDate(backup.timestamp)}
+                            </div>
+                            <div className="flex items-center text-xs text-muted-foreground">
+                              <Clock className="h-3 w-3 mr-1" />
+                              {formatTime(backup.timestamp)}
+                            </div>
+                          </div>
+                          <div className="flex flex-wrap gap-2 mb-4">
+                            <Badge variant="secondary" className="text-xs">
+                              域名: {backup.items.domains}
+                            </Badge>
+                            <Badge variant="secondary" className="text-xs">
+                              已售: {backup.items.soldDomains}
+                            </Badge>
+                            <Badge variant="secondary" className="text-xs">
+                              友链: {backup.items.friendlyLinks}
+                            </Badge>
+                            <Badge variant="secondary" className="text-xs">
+                              图标: {backup.items.registrarIcons}
+                            </Badge>
+                          </div>
+                          <div className="flex justify-end space-x-2">
+                            <Button variant="outline" size="sm" onClick={() => viewBackupDetails(backup)}>
+                              查看详情
+                            </Button>
+                            <Button variant="outline" size="sm">
+                              <Download className="h-4 w-4 mr-1" />
+                              下载
+                            </Button>
+                            <Button variant="outline" size="sm" className="text-red-600">
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-12">
+                  <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4 opacity-20" />
+                  <p className="text-muted-foreground">暂无备份历史记录</p>
+                </div>
+              )}
+            </CardContent>
           </Card>
         </TabsContent>
       </Tabs>
@@ -643,6 +954,93 @@ export default function BackupManager() {
             <Button variant="destructive" onClick={handleImport}>
               <ArrowRight className="h-4 w-4 mr-2" />
               确认导入
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* 备份详情对话框 */}
+      <Dialog open={showBackupDetails} onOpenChange={setShowBackupDetails}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>备份详情</DialogTitle>
+            <DialogDescription>查看备份文件的详细信息</DialogDescription>
+          </DialogHeader>
+          {selectedBackup && (
+            <div className="space-y-6 py-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <h4 className="text-sm font-medium">基本信息</h4>
+                  <div className="rounded-md bg-muted p-4 space-y-2">
+                    <div className="flex justify-between">
+                      <span className="text-sm">文件名：</span>
+                      <span className="text-sm font-medium">{selectedBackup.filename}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-sm">���小：</span>
+                      <span className="text-sm">{formatFileSize(selectedBackup.size)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-sm">创建日期：</span>
+                      <span className="text-sm">{formatDate(selectedBackup.timestamp)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-sm">创建时间：</span>
+                      <span className="text-sm">{formatTime(selectedBackup.timestamp)}</span>
+                    </div>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <h4 className="text-sm font-medium">内容统计</h4>
+                  <div className="rounded-md bg-muted p-4 space-y-2">
+                    <div className="flex justify-between">
+                      <span className="text-sm">待售域名：</span>
+                      <span className="text-sm font-medium">{selectedBackup.items.domains} 个</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-sm">已售域名：</span>
+                      <span className="text-sm font-medium">{selectedBackup.items.soldDomains} 个</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-sm">友情链接：</span>
+                      <span className="text-sm font-medium">{selectedBackup.items.friendlyLinks} 个</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-sm">注册商图标：</span>
+                      <span className="text-sm font-medium">{selectedBackup.items.registrarIcons} 个</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <h4 className="text-sm font-medium">备份内容预览</h4>
+                <div className="rounded-md bg-muted p-4 max-h-60 overflow-y-auto">
+                  <pre className="text-xs text-muted-foreground whitespace-pre-wrap">
+                    {`{
+  "version": "1.0.0",
+  "timestamp": ${selectedBackup.timestamp},
+  "domains": [ ... ${selectedBackup.items.domains} items ... ],
+  "soldDomains": [ ... ${selectedBackup.items.soldDomains} items ... ],
+  "friendlyLinks": [ ... ${selectedBackup.items.friendlyLinks} items ... ],
+  "registrarIcons": { ... ${selectedBackup.items.registrarIcons} items ... },
+  "siteSettings": { ... },
+  "auth": {
+    "passwordHash": "********"
+  }
+}`}
+                  </pre>
+                </div>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowBackupDetails(false)}>
+              关闭
+            </Button>
+            <Button>
+              <Download className="h-4 w-4 mr-2" />
+              下载此备份
             </Button>
           </DialogFooter>
         </DialogContent>
