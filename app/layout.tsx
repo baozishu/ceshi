@@ -5,7 +5,8 @@ import type { Metadata } from "next"
 
 async function getSiteConfig() {
   try {
-    const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || ""}/data/site-config.json`)
+    // 直接访问public目录下的文件，不需要基础URL
+    const res = await fetch(`/data/site-config.json`)
     if (!res.ok) return null
     const data = await res.json()
     return data.site
