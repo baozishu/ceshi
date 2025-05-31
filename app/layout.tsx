@@ -4,7 +4,6 @@ import { ThemeProvider } from "@/components/theme-provider"
 import type { Metadata } from "next"
 
 export async function generateMetadata(): Promise<Metadata> {
-  // 在客户端环境中，我们无法在服务端获取配置，所以使用默认值
   return {
     title: "作品集展示",
     description: "展示我的技术项目和创意作品",
