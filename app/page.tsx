@@ -37,6 +37,24 @@ interface Link {
   category: string
 }
 
+interface SocialLink {
+  name: string
+  url: string
+  icon: string
+}
+
+interface SiteConfig {
+  title: string
+  description: string
+  favicon: string
+  logo: string
+  author: string
+  copyright: string
+  keywords: string[]
+  themeColor: string
+  socialLinks: SocialLink[]
+}
+
 interface ProjectsData {
   projects: Project[]
 }
@@ -47,6 +65,10 @@ interface CategoriesData {
 
 interface LinksData {
   links: Link[]
+}
+
+interface SiteConfigData {
+  site: SiteConfig
 }
 
 // 默认数据，以防JSON加载失败
@@ -90,10 +112,23 @@ const defaultLinks: Link[] = [
   },
 ]
 
+const defaultSiteConfig: SiteConfig = {
+  title: "我的作品集",
+  description: "展示我的技术项目和创意作品",
+  favicon: "/favicon.ico",
+  logo: "/logo.png",
+  author: "开发者",
+  copyright: "© 2024 我的作品集. 保留所有权利.",
+  keywords: ["作品集", "项目展示"],
+  themeColor: "#3b82f6",
+  socialLinks: [],
+}
+
 export default function Portfolio() {
   const [projects, setProjects] = useState<Project[]>([])
   const [categories, setCategories] = useState<Category[]>([])
   const [links, setLinks] = useState<Link[]>([])
+  const [siteConfig, setSiteConfig] = useState<SiteConfig>(defaultSiteConfig)
   const [filteredProjects, setFilteredProjects] = useState<Project[]>([])
   const [filteredLinks, setFilteredLinks] = useState<Link[]>([])
   const [searchTerm, setSearchTerm] = useState("")
@@ -111,16 +146,18 @@ export default function Portfolio() {
 
         console.log("开始加载JSON数据...")
 
-        // 并行加载三个JSON文件
-        const [projectsResponse, categoriesResponse, linksResponse] = await Promise.all([
+        // 并行加载所有JSON文件
+        const [projectsResponse, categoriesResponse, linksResponse, siteConfigResponse] = await Promise.all([
           fetch("/data/projects.json"),
           fetch("/data/categories.json"),
           fetch("/data/links.json"),
+          fetch("/data/site-config.json"),
         ])
 
         console.log("项目数据响应状态:", projectsResponse.status)
         console.log("分类数据响应状态:", categoriesResponse.status)
         console.log("友情链接响应状态:", linksResponse.status)
+        console.log("网站配置响应状态:", siteConfigResponse.status)
 
         if (!projectsResponse.ok) {
           throw new Error(`项目数据加载失败: ${projectsResponse.status}`)
@@ -134,9 +171,14 @@ export default function Portfolio() {
           throw new Error(`友情链接加载失败: ${linksResponse.status}`)
         }
 
+        if (!siteConfigResponse.ok) {
+          throw new Error(`网站配置加载失败: ${siteConfigResponse.status}`)
+        }
+
         const projectsData: ProjectsData = await projectsResponse.json()
         const categoriesData: CategoriesData = await categoriesResponse.json()
         const linksData: LinksData = await linksResponse.json()
+        const siteConfigData: SiteConfigData = await siteConfigResponse.json()
 
         console.log(
           "数据加载成功:",
@@ -151,7 +193,16 @@ export default function Portfolio() {
         setProjects(projectsData.projects)
         setCategories(categoriesData.categories)
         setLinks(linksData.links)
-        setFilteredProjects(projectsData.projects)
+        setSiteConfig(siteConfigData.site)
+
+        // 确保精选项目排序正确
+        const sortedProjects = [...projectsData.projects].sort((a, b) => {
+          if (a.featured && !b.featured) return -1
+          if (!a.featured && b.featured) return 1
+          return 0
+        })
+
+        setFilteredProjects(sortedProjects)
         setFilteredLinks(linksData.links)
       } catch (error) {
         console.error("数据加载错误:", error)
@@ -161,6 +212,7 @@ export default function Portfolio() {
         setProjects(defaultProjects)
         setCategories(defaultCategories)
         setLinks(defaultLinks)
+        setSiteConfig(defaultSiteConfig)
         setFilteredProjects(defaultProjects)
         setFilteredLinks(defaultLinks)
       } finally {
@@ -173,7 +225,7 @@ export default function Portfolio() {
 
   useEffect(() => {
     // 过滤项目
-    let filtered = projects
+    let filtered = [...projects] // 创建副本以避免修改原始数据
 
     if (activeCategory !== "all") {
       filtered = filtered.filter((project) => project.category === activeCategory)
@@ -188,12 +240,17 @@ export default function Portfolio() {
       )
     }
 
-    // 将精选项目排在前面
-    filtered = filtered.sort((a, b) => {
+    // 将精选项目排在前面 - 确保排序正确执行
+    filtered.sort((a, b) => {
       if (a.featured && !b.featured) return -1
       if (!a.featured && b.featured) return 1
       return 0
     })
+
+    console.log(
+      "排序后的项目:",
+      filtered.map((p) => `${p.title} (featured: ${p.featured})`),
+    )
 
     setFilteredProjects(filtered)
   }, [projects, activeCategory, searchTerm])
@@ -330,7 +387,7 @@ export default function Portfolio() {
           </div>
 
           <div className="border-t pt-8 text-center text-sm text-muted-foreground">
-            <p>&copy; 2024 我的作品集. 保留所有权利.</p>
+            <p>{siteConfig.copyright}</p>
           </div>
         </div>
       </footer>
