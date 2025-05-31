@@ -3,37 +3,16 @@ import "@/app/globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
 import type { Metadata } from "next"
 
-async function getSiteConfig() {
-  try {
-    // 直接访问public目录下的文件，不需要基础URL
-    const res = await fetch(`/data/site-config.json`)
-    if (!res.ok) return null
-    const data = await res.json()
-    return data.site
-  } catch (error) {
-    console.error("Failed to load site config:", error)
-    return null
-  }
-}
-
 export async function generateMetadata(): Promise<Metadata> {
-  const siteConfig = await getSiteConfig()
-
-  if (!siteConfig) {
-    return {
-      title: "作品集展示",
-      description: "展示我的技术项目和创意作品",
-    }
-  }
-
+  // 在客户端环境中，我们无法在服务端获取配置，所以使用默认值
   return {
-    title: siteConfig.title,
-    description: siteConfig.description,
-    keywords: siteConfig.keywords,
-    authors: [{ name: siteConfig.author }],
-    themeColor: siteConfig.themeColor,
+    title: "作品集展示",
+    description: "展示我的技术项目和创意作品",
+    keywords: ["作品集", "项目展示", "开发者", "作品展示"],
+    authors: [{ name: "开发者" }],
+    themeColor: "#3b82f6",
     icons: {
-      icon: siteConfig.favicon,
+      icon: "https://www.dalao.net/view/img/favicon.ico",
     },
   }
 }
