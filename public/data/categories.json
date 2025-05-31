@@ -1,0 +1,40 @@
+{
+  "categories": [
+    {
+      "id": "all",
+      "label": "全部",
+      "description": "显示所有项目",
+      "icon": "grid"
+    },
+    {
+      "id": "web",
+      "label": "Web应用",
+      "description": "基于浏览器的网页应用程序",
+      "icon": "globe"
+    },
+    {
+      "id": "mobile",
+      "label": "移动应用",
+      "description": "iOS和Android移动应用程序",
+      "icon": "smartphone"
+    },
+    {
+      "id": "desktop",
+      "label": "桌面应用",
+      "description": "Windows、macOS和Linux桌面应用程序",
+      "icon": "monitor"
+    },
+    {
+      "id": "data",
+      "label": "数据分析",
+      "description": "数据处理、分析和可视化项目",
+      "icon": "bar-chart"
+    },
+    {
+      "id": "ai",
+      "label": "人工智能",
+      "description": "机器学习和人工智能相关项目",
+      "icon": "brain"
+    }
+  ]
+}

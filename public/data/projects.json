@@ -1,0 +1,76 @@
+{
+  "projects": [
+    {
+      "id": 1,
+      "title": "电商管理网站",
+      "description": "一个现代化的商务管理系统，支持多种商品形式。",
+      "category": "web",
+      "technologies": ["React", "Node.js", "MongoDB", "Tailwind CSS"],
+      "image": "/placeholder.svg?height=300&width=400",
+      "demoUrl": "https://example.com/demo1",
+      "githubUrl": "https://github.com/example/project1",
+      "date": "2024-03-15",
+      "featured": true
+    },
+    {
+      "id": 2,
+      "title": "个人任务中心",
+      "description": "一个功能丰富的个人任务中心应用，支持任务分发用户管理和协作。",
+      "category": "mobile",
+      "technologies": ["React Native", "Expo", "Firebase", "TypeScript"],
+      "image": "/placeholder.svg?height=300&width=400",
+      "demoUrl": "https://example.com/demo2",
+      "githubUrl": "https://github.com/example/project2",
+      "date": "2024-02-20",
+      "featured": false
+    },
+    {
+      "id": 3,
+      "title": "数据可视化控制板",
+      "description": "一个交互式的数据可视化控制板，支持一键式操作和实时数据分析。",
+      "category": "data",
+      "technologies": ["Python", "Django", "PostgreSQL", "D3.js"],
+      "image": "/placeholder.svg?height=300&width=400",
+      "demoUrl": "https://example.com/demo3",
+      "githubUrl": "https://github.com/example/project3",
+      "date": "2024-01-10",
+      "featured": true
+    },
+    {
+      "id": 4,
+      "title": "AI图像生成器",
+      "description": "使用机器学习技术的AI图像生成器,支持从文本生成高质量的图像。",
+      "category": "ai",
+      "technologies": ["Python", "TensorFlow", "OpenAI API", "Flask"],
+      "image": "/placeholder.svg?height=300&width=400",
+      "demoUrl": "https://example.com/demo4",
+      "githubUrl": "https://github.com/example/project4",
+      "date": "2023-12-05",
+      "featured": false
+    },
+    {
+      "id": 5,
+      "title": "区块链电商应用",
+      "description": "一个基于区块链的电子商务应用，支持在线被下单。",
+      "category": "desktop",
+      "technologies": ["Electron", "Vue.js", "Node.js", "SQLite"],
+      "image": "/placeholder.svg?height=300&width=400",
+      "demoUrl": "https://example.com/demo5",
+      "githubUrl": "https://github.com/example/project5",
+      "date": "2023-11-20",
+      "featured": false
+    },
+    {
+      "id": 6,
+      "title": "聊天式社交网站平台",
+      "description": "一个功能丰富的聊天式社交网站平台，支持多人同时在线交流。",
+      "category": "web",
+      "technologies": ["Next.js", "Socket.io", "Redis", "PostgreSQL"],
+      "image": "/placeholder.svg?height=300&width=400",
+      "demoUrl": "https://example.com/demo6",
+      "githubUrl": "https://github.com/example/project6",
+      "date": "2023-10-15",
+      "featured": true
+    }
+  ]
+}
