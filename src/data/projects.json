@@ -1,0 +1,43 @@
+{
+  "projects": [
+    {
+      "id": "project-1",
+      "title": "电商平台设计",
+      "description": "为知名品牌设计的全渠道电商平台界面",
+      "coverUrl": "https://nocode.meituan.com/photo/search?keyword=ecommerce,website&width=400&height=300",
+      "fullSizeUrl": "https://nocode.meituan.com/photo/search?keyword=ecommerce,website&width=1200&height=800",
+      "categories": ["UI设计", "网页设计"],
+      "date": "2023-05-15",
+      "client": "某知名电商",
+      "tools": ["Figma", "Photoshop"]
+    },
+    {
+      "id": "project-2",
+      "title": "品牌视觉系统",
+      "description": "科技公司全新品牌视觉识别系统设计",
+      "coverUrl": "https://nocode.meituan.com/photo/search?keyword=branding,design&width=400&height=300",
+      "fullSizeUrl": "https://nocode.meituan.com/photo/search?keyword=branding,design&width=1200&height=800",
+      "categories": ["品牌设计"],
+      "date": "2023-08-22",
+      "client": "某科技公司",
+      "tools": ["Illustrator", "After Effects"]
+    },
+    {
+      "id": "project-3",
+      "title": "移动应用设计",
+      "description": "健康管理类移动应用UI/UX设计",
+      "coverUrl": "https://nocode.meituan.com/photo/search?keyword=mobile,app&width=400&height=300",
+      "fullSizeUrl": "https://nocode.meituan.com/photo/search?keyword=mobile,app&width=1200&height=800",
+      "categories": ["UI设计", "UX设计"],
+      "date": "2023-11-10",
+      "client": "某健康科技公司",
+      "tools": ["Sketch", "Principle"]
+    }
+  ],
+  "categories": [
+    {"id": "ui", "name": "UI设计"},
+    {"id": "ux", "name": "UX设计"},
+    {"id": "web", "name": "网页设计"},
+    {"id": "brand", "name": "品牌设计"}
+  ]
+}
