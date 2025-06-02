@@ -1,0 +1,13 @@
+{
+  "title": "作品集合",
+  "description": "欢迎访问我的个人网站，这里展示了我的作品和项目",
+  "logo": "/images/logo.svg",
+  "footer": "© 2023 个人作品集. 保留所有权利.",
+  "theme": "dark",
+  "social": {
+    "github": "https://github.com/yourusername",
+    "twitter": "https://twitter.com/yourusername",
+    "linkedin": "https://linkedin.com/in/yourusername",
+    "email": "your.email@example.com"
+  }
+}
